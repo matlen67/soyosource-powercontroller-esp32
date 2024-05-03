@@ -15,9 +15,10 @@
 
   *************************
   Wiring
-  ESP32-WROOM D16 - RS485 RO
-  ESP32-WROOM D17 - RS485 DE/RE
-  ESP32-WROOM D4 - RS485 DI
+  ESP32-WROOM GPIO16 (RX) - RS485 RO
+  ESP32-WROOM GPIO17 (TX) - RS485 DI
+  ESP32-WROOM GPIO4       - RS485 DE/RE
+  
 
 ****************************************************************************/
 
