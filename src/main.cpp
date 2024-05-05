@@ -1,7 +1,7 @@
 /***************************************************************************
   soyosource-powercontroller for ESP32  @matlen67
 
-  Version: 1.240505.1
+  Version: 1.240505
 
   16.03.2024 -> Speichern der Checkboxzustände: aktiv Timer1 / Timer2
   03.04.2024 -> Statusübersicht bei geschlossenen details/summary boxen
@@ -12,6 +12,7 @@
   27.04.2024 -> Fehlerbehebung Shelly 3EM, Shelly Plus 1PM mit zugefügt
   28.04.2024 -> Teiler unter 'SoyoSource Output' hinzugefügt, um die Leistung auf mehere Geräte aufzuteilen
   29.04.2024 -> Telnet entfernt
+  05.05.2024 -> update to ArduinoJson 7.0.4
 
   *************************
   Wiring
@@ -23,8 +24,9 @@
 ****************************************************************************/
 
 #include <Arduino.h>
-#include <LittleFS.h>
 #include "FS.h"
+#include <LittleFS.h>
+
 
 #include <esp_wifi.h>
 #include <WiFi.h>
@@ -134,7 +136,7 @@ int teiler_output = 1;
 
 unsigned char mac[6];
 char mqtt_root[32] = "SoyoSource/";
-char clientId[12];
+char clientId[16];
 char topic_power[40];
 char soyo_text[40];
 
@@ -337,8 +339,6 @@ void reconnect() {
       DBG_PRINT("subscrible: ");
       DBG_PRINT("VenusOS/SmartShunt/voltage");
       DBG_PRINTLN("");
-
-
     } else {
       DBG_PRINTLN("reconnect failed! ");
       strcpy(mqtt_state, "connect error");
@@ -403,34 +403,41 @@ void sendSoyoPowerData(int power){
 
 //read configuration from config.json
 void readConfig(){
-  DBG_PRINTLN("mounting FS...");
+  DBG_PRINTLN(F("mounting FS..."));
 
   if (LittleFS.begin()) {
-    DBG_PRINTLN("mounted file system");
+    DBG_PRINTLN(F("mounted file system"));
+
     if (LittleFS.exists("/config.json")) {
       //file exists, reading and loading
-      DBG_PRINTLN("reading config file");
+      DBG_PRINTLN("open config file");
       File configFile = LittleFS.open("/config.json", "r");
       if (configFile) {
-        DBG_PRINTLN("opened config file");
+        DBG_PRINTLN("read config file");
         size_t size = configFile.size();
+
         // Allocate a buffer to store contents of the file.
         std::unique_ptr<char[]> buf(new char[size]);
 
         configFile.readBytes(buf.get(), size);
 
-        JsonDocument json;
-        auto deserializeError = deserializeJson(json, buf.get());
-        serializeJson(json, Serial);
-        if (!deserializeError) {
-          DBG_PRINTLN("\nparsed json");
-          strcpy(mqtt_server, json["mqtt_server"]);
-          strcpy(mqtt_port, json["mqtt_port"]);
+        JsonDocument jdoc;
+        DeserializationError error = deserializeJson(jdoc, buf.get());
+
+        serializeJson(jdoc, Serial);
+        DBG_PRINTLN();
+
+        configFile.close();
+
+        if (!error) {
+
+          strcpy(mqtt_server, jdoc["mqtt_server"]);
+          strcpy(mqtt_port, jdoc["mqtt_port"]);
 
           char key_value[2];
 
-          if(json.containsKey("mqtt_on")){
-            strcpy(key_value, json["mqtt_on"]);
+          if(jdoc.containsKey("mqtt_on")){
+            strcpy(key_value, jdoc["mqtt_on"]);
             if(strcmp(key_value, "1") == 0){
               checkbox_mqttenabled = true;
             }else{
@@ -438,8 +445,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("zft_on")){
-            strcpy(key_value, json["zft_on"]);
+          if(jdoc.containsKey("zft_on")){
+            strcpy(key_value, jdoc["zft_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_nulleinspeisung = true;
@@ -448,8 +455,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("batp_on")){
-            strcpy(key_value, json["batp_on"]);
+          if(jdoc.containsKey("batp_on")){
+            strcpy(key_value, jdoc["batp_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_batschutz = true;
@@ -458,8 +465,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("t1_on")){
-            strcpy(key_value, json["t1_on"]);
+          if(jdoc.containsKey("t1_on")){
+            strcpy(key_value, jdoc["t1_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_timer1 = true;
@@ -468,8 +475,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("t2_on")){
-            strcpy(key_value, json["t2_on"]);
+          if(jdoc.containsKey("t2_on")){
+            strcpy(key_value, jdoc["t2_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_timer2 = true;
@@ -478,8 +485,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("mtr_l1_on")){
-            strcpy(key_value, json["mtr_l1_on"]);
+          if(jdoc.containsKey("mtr_l1_on")){
+            strcpy(key_value, jdoc["mtr_l1_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_meter_l1 = true;
@@ -488,8 +495,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("mtr_l2_on")){
-            strcpy(key_value, json["mtr_l2_on"]);
+          if(jdoc.containsKey("mtr_l2_on")){
+            strcpy(key_value, jdoc["mtr_l2_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_meter_l2 = true;
@@ -498,8 +505,8 @@ void readConfig(){
             }
           }
 
-          if(json.containsKey("mtr_l3_on")){
-            strcpy(key_value, json["mtr_l3_on"]);
+          if(jdoc.containsKey("mtr_l3_on")){
+            strcpy(key_value, jdoc["mtr_l3_on"]);
 
             if(strcmp(key_value, "1") == 0){
               checkbox_meter_l3 = true;
@@ -509,62 +516,62 @@ void readConfig(){
           }
 
 
-          if(json.containsKey("t1_t")){
-            strcpy(timer1_time, json["t1_t"]);            
+          if(jdoc.containsKey("t1_t")){
+            strcpy(timer1_time, jdoc["t1_t"]);            
           }
 
-          if(json.containsKey("t2_t")){
-            strcpy(timer2_time, json["t2_t"]);
+          if(jdoc.containsKey("t2_t")){
+            strcpy(timer2_time, jdoc["t2_t"]);
           }
 
-          if(json.containsKey("t1_p")){
-            timer1_watt = json["t1_p"];
+          if(jdoc.containsKey("t1_p")){
+            timer1_watt = jdoc["t1_p"];
           }
 
-          if(json.containsKey("t2_p")){
-            timer2_watt = json["t2_p"];  
+          if(jdoc.containsKey("t2_p")){
+            timer2_watt = jdoc["t2_p"];  
           }
 
-          if(json.containsKey("mp")){
-            maxwatt = json["mp"];  
+          if(jdoc.containsKey("mp")){
+            maxwatt = jdoc["mp"];  
           }
 
-          if(json.containsKey("mtr_ip")){
-            strcpy(meteripaddr, json["mtr_ip"]);  
+          if(jdoc.containsKey("mtr_ip")){
+            strcpy(meteripaddr, jdoc["mtr_ip"]);  
             shelly_ip = String(meteripaddr);
           }
 
-          if(json.containsKey("mtr_iv")){
-            meterinterval = json["mtr_iv"]; 
+          if(jdoc.containsKey("mtr_iv")){
+            meterinterval = jdoc["mtr_iv"]; 
           }
 
-          if(json.containsKey("z_iv")){
-            nullinterval = json["z_iv"]; 
+          if(jdoc.containsKey("z_iv")){
+            nullinterval = jdoc["z_iv"]; 
           }
 
-          if(json.containsKey("z_ofs")){
-            nulloffset = json["z_ofs"]; 
+          if(jdoc.containsKey("z_ofs")){
+            nulloffset = jdoc["z_ofs"]; 
           }
 
-          if(json.containsKey("soc_stop")){
-            batsocstop = json["soc_stop"]; 
+          if(jdoc.containsKey("soc_stop")){
+            batsocstop = jdoc["soc_stop"]; 
           }
 
-          if(json.containsKey("soc_start")){
-            batsocstart = json["soc_start"]; 
+          if(jdoc.containsKey("soc_start")){
+            batsocstart = jdoc["soc_start"]; 
           }
 
-          if(json.containsKey("tout")){
-            teiler_output = json["tout"]; 
+          if(jdoc.containsKey("tout")){
+            teiler_output = jdoc["tout"]; 
           }
 
         } else {
-          DBG_PRINTLN("failed to load json config");
+          DBG_PRINTLN(F("failed to load json config"));
         }
       }
     }
   } else {
-    DBG_PRINTLN("failed to mount FS");
+    DBG_PRINTLN(F("failed to mount FS"));
   }
   //end read config data
 }
@@ -572,114 +579,121 @@ void readConfig(){
 // save data to config.json
 void saveConfig(){
   DBG_PRINTLN(F("save data to config.json"));
-  JsonDocument json;
+  JsonDocument jdoc;
  
-  json["mqtt_server"] = mqtt_server;
-  json["mqtt_port"] = mqtt_port;
+  jdoc["mqtt_server"] = mqtt_server;
+  jdoc["mqtt_port"] = mqtt_port;
 
   if(checkbox_mqttenabled){
-    json["mqtt_on"] = "1";
+    jdoc["mqtt_on"] = "1";
   }else{
-    json["mqtt_on"] = "0";
+    jdoc["mqtt_on"] = "0";
   }
 
   if(checkbox_nulleinspeisung){
-    json["zft_on"] = "1";
+    jdoc["zft_on"] = "1";
   }else{
-    json["zft_on"] = "0";
+    jdoc["zft_on"] = "0";
   }
 
   if(checkbox_batschutz){
-    json["batp_on"] = "1";
+    jdoc["batp_on"] = "1";
   }else{
-    json["batp_on"] = "0";
+    jdoc["batp_on"] = "0";
   }
 
   if(checkbox_timer1){
-    json["t1_on"] = "1";
+    jdoc["t1_on"] = "1";
   }else{
-    json["t1_on"] = "0";
+    jdoc["t1_on"] = "0";
   }
 
   if(checkbox_timer2){
-    json["t2_on"] = "1";
+    jdoc["t2_on"] = "1";
   }else{
-    json["t2_on"] = "0";
+    jdoc["t2_on"] = "0";
   }
 
   if(checkbox_meter_l1){
-    json["mtr_l1_on"] = "1";
+    jdoc["mtr_l1_on"] = "1";
   }else{
-    json["mtr_l1_on"] = "0";
+    jdoc["mtr_l1_on"] = "0";
   }
 
    if(checkbox_meter_l2){
-    json["mtr_l2_on"] = "1";
+    jdoc["mtr_l2_on"] = "1";
   }else{
-    json["mtr_l2_on"] = "0";
+    jdoc["mtr_l2_on"] = "0";
   }
 
    if(checkbox_meter_l3){
-    json["mtr_l3_on"] = "1";
+    jdoc["mtr_l3_on"] = "1";
   }else{
-    json["mtr_l3_on"] = "0";
+    jdoc["mtr_l3_on"] = "0";
   }
 
-  json["t1_t"] = timer1_time;
-  json["t1_p"] = timer1_watt;
-  json["t2_t"] = timer2_time;
-  json["t2_p"] = timer2_watt;
-  json["mp"] = maxwatt;
-  json["mtr_ip"] = meteripaddr;
-  json["mtr_iv"] = meterinterval;
-  json["z_iv"] = nullinterval;
-  json["z_ofs"] = nulloffset;
-  json["soc_stop"] = batsocstop;
-  json["soc_start"] = batsocstart;
-  json["tout"] = teiler_output;
+  jdoc["t1_t"] = timer1_time;
+  jdoc["t1_p"] = timer1_watt;
+  jdoc["t2_t"] = timer2_time;
+  jdoc["t2_p"] = timer2_watt;
+  jdoc["mp"] = maxwatt;
+  jdoc["mtr_ip"] = meteripaddr;
+  jdoc["mtr_iv"] = meterinterval;
+  jdoc["z_iv"] = nullinterval;
+  jdoc["z_ofs"] = nulloffset;
+  jdoc["soc_stop"] = batsocstop;
+  jdoc["soc_start"] = batsocstart;
+  jdoc["tout"] = teiler_output;
   
   File configFile = LittleFS.open("/config.json", "w");
   if (!configFile) {
-    DBG_PRINTLN("failed to open config file for writing");
+    DBG_PRINTLN(F("failed to open config file for writing"));
     return;
   }
 
-  serializeJson(json, configFile);
-  configFile.close();
 
-  serializeJson(json, Serial);
+  if(serializeJson(jdoc, configFile) == 0) {
+    DBG_PRINTLN(F("Failed to write to file"));
+  }else{
+    serializeJson(jdoc, Serial); // print to serial console
   DBG_PRINTLN();
+  }; 
+
+  configFile.close();
 }
 
 
 // get shelly type(3EM PRO, 3EM, EM, 1PM, Plus 1PM)
 int getShellyType(){ 
+  //WiFiClient client_shelly;
+  HTTPClient http;
+  JsonDocument jdoc;
   String shelly_url = "http://" + shelly_ip +  "/shelly";
   int type = 0;
 
   memset(metername, 0, sizeof(metername)); 
-  strcat(metername, "no device");    
-   
-  JsonDocument doc;
- 
-  WiFiClient client_shelly;
-  HTTPClient http;
-  
+  strcat(metername, "no device"); 
 
-  if (http.begin(client_shelly, shelly_url)) { 
+  if(WiFi.status() != WL_CONNECTED ) {
+    DBG_PRINTLN(F("WiFi not connected!"));
+    return 0;
+  }
+
+  //if (http.begin(client_shelly, shelly_url)) { 
+  if (http.begin(shelly_url)) { 
     int httpCode = http.GET();
     if (httpCode > 0) {
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
         String payload = http.getString();   
-        DeserializationError error = deserializeJson(doc, payload);
+        DeserializationError error = deserializeJson(jdoc, payload);
         
         if (error) {
           DBG_PRINT(F("deserializeJson() failed: "));
           DBG_PRINTLN(error.f_str());
         }
 
-        String json_type = doc["type"];
-        String json_model = doc["model"];
+        String json_type = jdoc["type"];
+        String json_model = jdoc["model"];
 
         if(json_type != NULL){
 
@@ -726,7 +740,7 @@ int getShellyType(){
     }
     http.end();
   }
-  DBG_PRINT("getShellyType() = ");
+  DBG_PRINT(F("getShellyType() = "));
   DBG_PRINTLN(String(metername));
 
   return type;
@@ -741,8 +755,8 @@ int getMeterData(int type) {
   int power2 = 0;
   int power3 = 0; 
   
-  JsonDocument doc;
-  WiFiClient client_shelly;
+  JsonDocument jdoc;
+  //WiFiClient client_shelly;
   HTTPClient http;
    
   if (type > 0 && type < 10) { 
@@ -753,12 +767,18 @@ int getMeterData(int type) {
     return 0;
   }                      
   
-  if (http.begin(client_shelly, shelly_url))  {  
+  if(WiFi.status() != WL_CONNECTED ) {
+    DBG_PRINTLN(F("WiFi not connected!"));
+    return 0;
+  }
+
+  //if (http.begin(client_shelly, shelly_url))  { 
+  if (http.begin(shelly_url))  {  
     int httpCode = http.GET();         
     if (httpCode > 0) {
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
         String payload = http.getString();   
-        DeserializationError error = deserializeJson(doc, payload);
+        DeserializationError error = deserializeJson(jdoc, payload);
                 
         if (error) {
           DBG_PRINT(F("deserializeJson() failed: "));
@@ -767,23 +787,23 @@ int getMeterData(int type) {
 
        
         if (type == shelly_3em_pro) {
-          power1 = doc["em:0"]["a_act_power"];  
-          power2 = doc["em:0"]["b_act_power"];
-          power3 = doc["em:0"]["c_act_power"]; 
+          power1 = jdoc["em:0"]["a_act_power"];  
+          power2 = jdoc["em:0"]["b_act_power"];
+          power3 = jdoc["em:0"]["c_act_power"]; 
         } else if (type == shelly_3em) {
-          power1 = doc["emeters"][0]["power"]; 
-          power2 = doc["emeters"][1]["power"]; 
-          power3 = doc["emeters"][2]["power"]; 
+          power1 = jdoc["emeters"][0]["power"]; 
+          power2 = jdoc["emeters"][1]["power"]; 
+          power3 = jdoc["emeters"][2]["power"]; 
         } else if (type == shelly_em) {
-          power1 = doc["meters"][0]["power"]; 
-          power2 = doc["meters"][1]["power"]; 
+          power1 = jdoc["meters"][0]["power"]; 
+          power2 = jdoc["meters"][1]["power"]; 
           power3 = 0; 
         } else if (type == shelly_1pm) {
-          power1 = doc["meters"][0]["power"];
+          power1 = jdoc["meters"][0]["power"];
           power2 = 0;
           power3 = 0;   
         } else if (type == shelly_plus_1pm) {
-          power1 = doc["switch:0"]["apower"]; 
+          power1 = jdoc["switch:0"]["apower"]; 
           power2 = 0;
           power3 = 0;
         }  
@@ -847,7 +867,6 @@ void checkTimer(){
       soyo_power = timer2_watt;
     }
   }
-
 }
 
 
@@ -855,20 +874,18 @@ void checkTimer(){
 void setup() {
 
   DEBUG_SERIAL.begin(115200);
-  delay(500);
-
-  if (!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)) { 
-    DBG_PRINT("LittleFS mount failed, ");
-    DBG_PRINTLN(" Create Filesystem");
-    saveConfig();
-  }
-
-
+  
   DBG_PRINTLN("");
   DBG_PRINT(F("CPU Frequency = "));
   DBG_PRINT(F_CPU / 1000000);
   DBG_PRINTLN(F(" MHz"));
   
+  if(!LittleFS.begin(FORMAT_LITTLEFS_IF_FAILED)) { 
+    DBG_PRINT("LittleFS mount failed, ");
+    DBG_PRINTLN(" Create Filesystem");
+    return;
+  }
+
   WiFi.mode(WIFI_STA);
   WiFi.macAddress(mac);
   
@@ -891,25 +908,26 @@ void setup() {
   digitalWrite(SERIAL_COMMUNICATION_CONTROL_PIN, RS485_RX_PIN_VALUE);
   RS485Serial.begin(4800);   // set RS485 baud
 
- 
+  readConfig(); //read config.json
+
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6); 
 
   WiFiManager wifiManager;
-  //wifiManager.resetSettings();
   wifiManager.setClass("invert"); // dark theme
   wifiManager.setSaveConfigCallback(saveConfigCallback);
+  wifiManager.setConnectTimeout(20);
   wifiManager.setConfigPortalTimeout(120);
-  //wifiManager.setConfigPortalBlocking(false);
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
  
-
+  // create menu with only two entries
   std::vector<const char *> wm_menu  = {"wifi", "exit"};
   wifiManager.setShowInfoUpdate(false);
   wifiManager.setShowInfoErase(false);
   wifiManager.setMenu(wm_menu);
   
+  // start WifiManager
   bool res = wifiManager.autoConnect(clientId);
   
   if(!res) {
@@ -925,8 +943,6 @@ void setup() {
     DBG_PRINTLN(WiFi.localIP());
     DBG_PRINTLN();
 
-    readConfig(); //read saved confi.json
-
     //read updated parameters
     strcpy(mqtt_server, custom_mqtt_server.getValue());
     strcpy(mqtt_port, custom_mqtt_port.getValue());
@@ -936,7 +952,6 @@ void setup() {
       saveConfig();
     }
 
-    DBG_PRINTLN(String("mqttenabled: ") + checkbox_mqttenabled);
     if(checkbox_mqttenabled){
       DBG_PRINTLN("set mqtt server!");
       DBG_PRINTLN(String("mqtt_server: ") + mqtt_server);
@@ -966,85 +981,84 @@ void setup() {
 
     // crate json and fetch data
     server.on("/json", HTTP_GET, [] (AsyncWebServerRequest *request){
-      JsonDocument myJson;
+      JsonDocument jdoc;
       String message = "";
 
       rssi = WiFi.RSSI();
 
-      myJson["WIFIRSSI"]      = rssi;
-      myJson["CLIENTID"]      = clientId;
-      myJson["METERNAME"]     = metername;
-      myJson["MAXWATTINPUT"]  = maxwatt;
-      myJson["TOUT"]          = teiler_output;
-      myJson["NULLINTERVAL"]  = nullinterval;
-      myJson["NULLOFFSET"]    = nulloffset;
-      myJson["METERIP"]       = meteripaddr;
-      myJson["METERINTERVAL"] = meterinterval;
-      myJson["TIMER1TIME"]    = timer1_time;
-      myJson["TIMER1WATT"]    = timer1_watt;
-      myJson["TIMER2TIME"]    = timer2_time;
-      myJson["TIMER2WATT"]    = timer2_watt;
-      myJson["MQTTROOT"]      = mqtt_root;
-      myJson["MQTTSTATECL"]   = mqtt_state;
+      jdoc["WIFIRSSI"]      = rssi;
+      jdoc["CLIENTID"]      = clientId;
+      jdoc["METERNAME"]     = metername;
+      jdoc["MAXWATTINPUT"]  = maxwatt;
+      jdoc["TOUT"]          = teiler_output;
+      jdoc["NULLINTERVAL"]  = nullinterval;
+      jdoc["NULLOFFSET"]    = nulloffset;
+      jdoc["METERIP"]       = meteripaddr;
+      jdoc["METERINTERVAL"] = meterinterval;
+      jdoc["TIMER1TIME"]    = timer1_time;
+      jdoc["TIMER1WATT"]    = timer1_watt;
+      jdoc["TIMER2TIME"]    = timer2_time;
+      jdoc["TIMER2WATT"]    = timer2_watt;
+      jdoc["MQTTROOT"]      = mqtt_root;
+      jdoc["MQTTSTATECL"]   = mqtt_state;
 
-      myJson["CBNULL"] = checkbox_nulleinspeisung; //checkbox
+      jdoc["CBNULL"] = checkbox_nulleinspeisung; //checkbox
       if(checkbox_nulleinspeisung){       // Stausanzeige
-        myJson["NULLSTATE"] = "EIN";
+        jdoc["NULLSTATE"] = "EIN";
       }else{
-        myJson["NULLSTATE"] = "AUS";
+        jdoc["NULLSTATE"] = "AUS";
       }
 
-      myJson["CBMQTTSTATE"] = checkbox_mqttenabled; //checkbox
+      jdoc["CBMQTTSTATE"] = checkbox_mqttenabled; //checkbox
       if(checkbox_mqttenabled){
-        myJson["MQTTSTATE"] = "EIN";
+        jdoc["MQTTSTATE"] = "EIN";
       }else{
-        myJson["MQTTSTATE"] = "AUS";
+        jdoc["MQTTSTATE"] = "AUS";
       }
 
-      myJson["CBTIMER1"] = checkbox_timer1; //checkbox
-      myJson["CBTIMER2"] = checkbox_timer2; //checkbox
+      jdoc["CBTIMER1"] = checkbox_timer1; //checkbox
+      jdoc["CBTIMER2"] = checkbox_timer2; //checkbox
       if(checkbox_timer1 || checkbox_timer2){
-        myJson["TIMERSTATE"] = "EIN";
+        jdoc["TIMERSTATE"] = "EIN";
       }else{
-        myJson["TIMERSTATE"] = "AUS";
+        jdoc["TIMERSTATE"] = "AUS";
       }
 
-      myJson["CBBATSCHUTZ"] = checkbox_batschutz; //checkbox
+     jdoc["CBBATSCHUTZ"] = checkbox_batschutz; //checkbox
       if(checkbox_batschutz){
-        myJson["BATTSTATE"] = "EIN";
+        jdoc["BATTSTATE"] = "EIN";
       }else{
-        myJson["BATTSTATE"] = "AUS";
+        jdoc["BATTSTATE"] = "AUS";
       }
 
-      myJson["CBMETERL1"] = checkbox_meter_l1; //checkbox Shelly L1
-      myJson["CBMETERL2"] = checkbox_meter_l2; //checkbox Shelly L2
-      myJson["CBMETERL3"] = checkbox_meter_l3; //checkbox Shelly L3
+      jdoc["CBMETERL1"] = checkbox_meter_l1; //checkbox Shelly L1
+      jdoc["CBMETERL2"] = checkbox_meter_l2; //checkbox Shelly L2
+      jdoc["CBMETERL3"] = checkbox_meter_l3; //checkbox Shelly L3
 
-      myJson["MQTTSERVER"] = mqtt_server;
-      myJson["MQTTPORT"] = mqtt_port;
-      myJson["UPTIME"] = uptime_str;
-      myJson["SOYOPOWER"] = soyo_power;
-      myJson["METERNAME"] = metername;
-      myJson["METERPOWER"] = meterpower;
-      myJson["METERL1"] = meterl1;
-      myJson["METERL2"] = meterl2;
-      myJson["METERL3"] = meterl3;
-      myJson["MQTT_SUB_1"] = String(soyo_power) + " W";
-      myJson["MQTT_BAT_SOC"] = String(mqtt_bat_soc, 1) + " %";
-      myJson["MQTT_BAT_V"] = String(mqtt_bat_voltage, 1) + " V";
-      myJson["BATSOCSTOP"] = batsocstop;
-      myJson["BATSOCSTART"] = batsocstart;
-      myJson["WIFIQUALITI"] = dBmtoPercent(rssi);
+      jdoc["MQTTSERVER"] = mqtt_server;
+      jdoc["MQTTPORT"] = mqtt_port;
+      jdoc["UPTIME"] = uptime_str;
+      jdoc["SOYOPOWER"] = soyo_power;
+      jdoc["METERNAME"] = metername;
+      jdoc["METERPOWER"] = meterpower;
+      jdoc["METERL1"] = meterl1;
+      jdoc["METERL2"] = meterl2;
+      jdoc["METERL3"] = meterl3;
+      jdoc["MQTT_SUB_1"] = String(soyo_power) + " W";
+      jdoc["MQTT_BAT_SOC"] = String(mqtt_bat_soc, 1) + " %";
+      jdoc["MQTT_BAT_V"] = String(mqtt_bat_voltage, 1) + " V";
+      jdoc["BATSOCSTOP"] = batsocstop;
+      jdoc["BATSOCSTART"] = batsocstart;
+      jdoc["WIFIQUALITI"] = dBmtoPercent(rssi);
 
 
-      serializeJson(myJson, message);
+      serializeJson(jdoc, message);
 
       request->send(200, "application/json", message);
     });
 
     // start AP Mode
     server.on("/apmode", HTTP_GET, [](AsyncWebServerRequest *request) {
-      //ESPAsync_WiFiManager wifiManager(&server,&dns);
       WiFiManager wifiManager;
       wifiManager.resetSettings();
       
