@@ -1,7 +1,7 @@
 /***************************************************************************
   soyosource-powercontroller for ESP32  @matlen67
 
-  Version: 1.240503.1
+  Version: 1.240505.1
 
   16.03.2024 -> Speichern der Checkboxzustände: aktiv Timer1 / Timer2
   03.04.2024 -> Statusübersicht bei geschlossenen details/summary boxen
@@ -419,7 +419,7 @@ void readConfig(){
 
         configFile.readBytes(buf.get(), size);
 
-        DynamicJsonDocument json(1024);
+        JsonDocument json;
         auto deserializeError = deserializeJson(json, buf.get());
         serializeJson(json, Serial);
         if (!deserializeError) {
@@ -572,7 +572,7 @@ void readConfig(){
 // save data to config.json
 void saveConfig(){
   DBG_PRINTLN(F("save data to config.json"));
-  DynamicJsonDocument json(1024);
+  JsonDocument json;
  
   json["mqtt_server"] = mqtt_server;
   json["mqtt_port"] = mqtt_port;
@@ -660,7 +660,7 @@ int getShellyType(){
   memset(metername, 0, sizeof(metername)); 
   strcat(metername, "no device");    
    
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
  
   WiFiClient client_shelly;
   HTTPClient http;
@@ -741,7 +741,7 @@ int getMeterData(int type) {
   int power2 = 0;
   int power3 = 0; 
   
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   WiFiClient client_shelly;
   HTTPClient http;
    
@@ -966,7 +966,7 @@ void setup() {
 
     // crate json and fetch data
     server.on("/json", HTTP_GET, [] (AsyncWebServerRequest *request){
-      DynamicJsonDocument myJson(1024);
+      JsonDocument myJson;
       String message = "";
 
       rssi = WiFi.RSSI();

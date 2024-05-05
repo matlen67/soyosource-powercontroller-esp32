@@ -200,7 +200,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="topnav">
     <h3>SoyoSource-PowerController</h3>
-    <div class="version">v 1.240503.1</div>
+    <div class="version">v 1.240505.1</div>
   </div>
 
   <div class="content">
