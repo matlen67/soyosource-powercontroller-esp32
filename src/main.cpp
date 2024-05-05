@@ -308,6 +308,8 @@ String processor(const String& var){
 void reconnect() {
   DBG_PRINTLN("reconnect MQTT connection!");
 
+  client.setServer(mqtt_server, atoi(mqtt_port));
+    
   //set callback again
   client.setCallback(mqtt_callback);
   
@@ -340,7 +342,7 @@ void reconnect() {
       DBG_PRINT("VenusOS/SmartShunt/voltage");
       DBG_PRINTLN("");
     } else {
-      DBG_PRINTLN("reconnect failed! ");
+      DBG_PRINTLN("reconnect failed!");
       strcpy(mqtt_state, "connect error");
       
       //give a litle time to connect
@@ -665,7 +667,6 @@ void saveConfig(){
 
 // get shelly type(3EM PRO, 3EM, EM, 1PM, Plus 1PM)
 int getShellyType(){ 
-  //WiFiClient client_shelly;
   HTTPClient http;
   JsonDocument jdoc;
   String shelly_url = "http://" + shelly_ip +  "/shelly";
@@ -678,8 +679,7 @@ int getShellyType(){
     DBG_PRINTLN(F("WiFi not connected!"));
     return 0;
   }
-
-  //if (http.begin(client_shelly, shelly_url)) { 
+ 
   if (http.begin(shelly_url)) { 
     int httpCode = http.GET();
     if (httpCode > 0) {
@@ -756,7 +756,6 @@ int getMeterData(int type) {
   int power3 = 0; 
   
   JsonDocument jdoc;
-  //WiFiClient client_shelly;
   HTTPClient http;
    
   if (type > 0 && type < 10) { 
@@ -772,7 +771,6 @@ int getMeterData(int type) {
     return 0;
   }
 
-  //if (http.begin(client_shelly, shelly_url))  { 
   if (http.begin(shelly_url))  {  
     int httpCode = http.GET();         
     if (httpCode > 0) {
@@ -968,7 +966,6 @@ void setup() {
         //DEBUG_SERIAL.printf("Client reconnected! Last message ID that it got is: %u\n", client->lastId());
         sprintf(dbgbuffer,"Client reconnected! Last message ID that it got is: %u\n", client->lastId());
         DBG_PRINTLN(dbgbuffer);
-        //DEBUG_SERIAL.println("");
       }
       client->send("hello!", NULL, millis(), 10000);
     });
@@ -1050,7 +1047,6 @@ void setup() {
       jdoc["BATSOCSTOP"] = batsocstop;
       jdoc["BATSOCSTART"] = batsocstart;
       jdoc["WIFIQUALITI"] = dBmtoPercent(rssi);
-
 
       serializeJson(jdoc, message);
 
