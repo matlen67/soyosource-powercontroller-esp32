@@ -1,7 +1,7 @@
 /***************************************************************************
   soyosource-powercontroller for ESP32  @matlen67
 
-  Version: 1.240505
+  Version: 1.240509
 
   16.03.2024 -> Speichern der Checkboxzustände: aktiv Timer1 / Timer2
   03.04.2024 -> Statusübersicht bei geschlossenen details/summary boxen
@@ -13,6 +13,8 @@
   28.04.2024 -> Teiler unter 'SoyoSource Output' hinzugefügt, um die Leistung auf mehere Geräte aufzuteilen
   29.04.2024 -> Telnet entfernt
   05.05.2024 -> update to ArduinoJson 7.0.4
+  08.05.2024 -> mqtt: Batterie und SOC Topic editierbar
+  09.05.2024 -> update Partitionstable -> 1,9MB App, 190KB Spiffs (used Flash: 60,8%)
 
   *************************
   Wiring
@@ -41,6 +43,8 @@
 #include <Uptime.h>
 #include <time.h>
 #include "html.h"
+
+//#include "nvs_flash.h" // nvs_flash_init(), ...
 
 #define DEBUG_SERIAL Serial
 
@@ -115,6 +119,8 @@ unsigned long ota_progress_millis = 0;
 //mqtt
 char mqtt_server[16] = "192.168.178.10";
 char mqtt_port[5] = "1889";
+char mqtt_topic_bat_voltage [48] = "VenusOS/SmartShunt/voltage";
+char mqtt_topic_bat_soc [48] = "VenusOS/SmartShunt/soc";
 char msgData[64];
 String msg = "";
 
@@ -288,12 +294,12 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     }
   }
 
-  if(strcmp(topic, "VenusOS/SmartShunt/soc") == 0){
+  if(strcmp(topic, mqtt_topic_bat_soc) == 0){
     float arrived_value_f = atof(buffer);
     mqtt_bat_soc = arrived_value_f;
   }
 
-  if(strcmp(topic, "VenusOS/SmartShunt/voltage") == 0){
+  if(strcmp(topic, mqtt_topic_bat_voltage) == 0){
     float arrived_value_f = atof(buffer);
     mqtt_bat_voltage = arrived_value_f;
   }
@@ -325,8 +331,8 @@ void reconnect() {
 
       client.publish(topic_power, "0"); 
       client.subscribe(topic_power);
-      client.subscribe("VenusOS/SmartShunt/soc");
-      client.subscribe("VenusOS/SmartShunt/voltage");
+      client.subscribe(mqtt_topic_bat_soc);
+      client.subscribe(mqtt_topic_bat_voltage);
 
       strcpy(mqtt_state, "connect");
 
@@ -335,11 +341,11 @@ void reconnect() {
       DBG_PRINTLN("");
 
       DBG_PRINT("subscrible: ");
-      DBG_PRINT("VenusOS/SmartShunt/soc");
+      DBG_PRINT(mqtt_topic_bat_soc);
       DBG_PRINTLN("");
 
       DBG_PRINT("subscrible: ");
-      DBG_PRINT("VenusOS/SmartShunt/voltage");
+      DBG_PRINT(mqtt_topic_bat_voltage);
       DBG_PRINTLN("");
     } else {
       DBG_PRINTLN("reconnect failed!");
@@ -435,6 +441,14 @@ void readConfig(){
 
           strcpy(mqtt_server, jdoc["mqtt_server"]);
           strcpy(mqtt_port, jdoc["mqtt_port"]);
+
+          if(jdoc.containsKey("mqtt_bat_vol")){
+            strcpy(mqtt_topic_bat_voltage, jdoc["mqtt_bat_vol"]);
+          }
+
+          if(jdoc.containsKey("mqtt_bat_soc")){
+            strcpy(mqtt_topic_bat_soc, jdoc["mqtt_bat_soc"]);
+          }
 
           char key_value[2];
 
@@ -578,6 +592,7 @@ void readConfig(){
   //end read config data
 }
 
+
 // save data to config.json
 void saveConfig(){
   DBG_PRINTLN(F("save data to config.json"));
@@ -585,6 +600,8 @@ void saveConfig(){
  
   jdoc["mqtt_server"] = mqtt_server;
   jdoc["mqtt_port"] = mqtt_port;
+  jdoc["mqtt_bat_vol"] = mqtt_topic_bat_voltage;
+  jdoc["mqtt_bat_soc"] = mqtt_topic_bat_soc;
 
   if(checkbox_mqttenabled){
     jdoc["mqtt_on"] = "1";
@@ -867,10 +884,43 @@ void checkTimer(){
   }
 }
 
+//**************************************************
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+            Serial.println(file.name());
+            if(levels){
+                listDir(fs, file.path(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
+}
+
+//**************************************************
+
 
 //#################### SETUP #######################
 void setup() {
-
   DEBUG_SERIAL.begin(115200);
   
   DBG_PRINTLN("");
@@ -884,8 +934,11 @@ void setup() {
     return;
   }
 
+  listDir(LittleFS, "/", 0);
+
   WiFi.mode(WIFI_STA);
   WiFi.macAddress(mac);
+  WiFi.persistent(true);
   
   sprintf(dbgbuffer,"ESP_%02X%02X%02X", mac[3], mac[4], mac[5]);
   DBG_PRINTLN(dbgbuffer);
@@ -906,12 +959,20 @@ void setup() {
   digitalWrite(SERIAL_COMMUNICATION_CONTROL_PIN, RS485_RX_PIN_VALUE);
   RS485Serial.begin(4800);   // set RS485 baud
 
+  if (!LittleFS.exists("/config.json")) { 
+    saveConfig();
+  }
+
   readConfig(); //read config.json
 
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 6); 
 
   WiFiManager wifiManager;
+  
+  wifiManager.setDebugOutput(true);
+  //wifiManager.resetSettings();
+ 
   wifiManager.setClass("invert"); // dark theme
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.setConnectTimeout(20);
@@ -1034,6 +1095,9 @@ void setup() {
 
       jdoc["MQTTSERVER"] = mqtt_server;
       jdoc["MQTTPORT"] = mqtt_port;
+      jdoc["MQTTBATVOL"] = mqtt_topic_bat_voltage;
+      jdoc["MQTTBATSOC"] = mqtt_topic_bat_soc;
+
       jdoc["UPTIME"] = uptime_str;
       jdoc["SOYOPOWER"] = soyo_power;
       jdoc["METERNAME"] = metername;
@@ -1237,6 +1301,14 @@ void setup() {
       value =  request->getParam("mqttport")->value();
       memset(mqtt_port, 0, sizeof(mqtt_port)); 
       strcat(mqtt_port, value.c_str());
+
+      value =  request->getParam("mqttbatvol")->value();
+      memset(mqtt_topic_bat_voltage, 0, sizeof(mqtt_topic_bat_voltage)); 
+      strcat(mqtt_topic_bat_voltage, value.c_str());
+
+      value =  request->getParam("mqttbatsoc")->value();
+      memset(mqtt_topic_bat_soc, 0, sizeof(mqtt_topic_bat_soc)); 
+      strcat(mqtt_topic_bat_soc, value.c_str());
 
       value =  request->getParam("batsocstop")->value();
       batsocstop = atoi(value.c_str());
