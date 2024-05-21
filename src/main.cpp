@@ -1,7 +1,7 @@
 /***************************************************************************
   soyosource-powercontroller for ESP32  @matlen67
 
-  Version: 1.240509
+  Version: 1.240521
 
   16.03.2024 -> Speichern der Checkboxzustände: aktiv Timer1 / Timer2
   03.04.2024 -> Statusübersicht bei geschlossenen details/summary boxen
@@ -15,6 +15,7 @@
   05.05.2024 -> update to ArduinoJson 7.0.4
   08.05.2024 -> mqtt: Batterie und SOC Topic editierbar
   09.05.2024 -> update Partitionstable -> 1,9MB App, 190KB Spiffs (used Flash: 60,8%)
+  21.05.2024 -Y Nulleinspeisung, update max power to 5000
 
   *************************
   Wiring
@@ -46,9 +47,9 @@
 
 //#include "nvs_flash.h" // nvs_flash_init(), ...
 
-#define DEBUG_SERIAL Serial
+#define DEBUG_SERIAL Serial 
 
-#define DEBUG
+#define DEBUG 
 
 #ifdef DEBUG
   #define DBG_PRINT(x) DEBUG_SERIAL.print(x)

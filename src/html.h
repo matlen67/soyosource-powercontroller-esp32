@@ -4,203 +4,289 @@ const char index_html[] PROGMEM = R"rawliteral(
 <head>
   <title>SoyoSource-PowerController</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
-    html {font-family: Arial; display: inline-block; text-align: center;}
-    table { width: 90%; table-layout: fixed; }
-    table.font1{ font-size: clamp(.9rem, 0.9vw, 1.2rem); }
-    table.style2 { width: 100%; table-layout: fixed; }
-    td { text-align: left; }
-    th { text-align: center; }
-    p {  font-size: 1.2rem;}
-    body {  margin: 0;}
-    .title1 { font-size: 1.2rem; font-weight: bold; color: #034078; }
-    .alnright { text-align: right; }
-    .topnav { overflow: hidden; background-color: #263c5e; color: white; font-size:1.5rem; margin:0px; padding:0px }
-    .content { padding: 10px; }
-    .card { background-color: white; padding: 5px; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); }
-    .card-grid { max-width: 700px; margin: 0 auto; display: grid; grid-gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(20em, 1fr)); }
-    .reading { font-size: 2.0rem; }
-    .headline { font-size: 2.0rem; font-weight: bold; }
-    .card.info { color: #034078; }
-    .card.info-dark { color: #151515; }
-    .card-title { font-size: 1.2rem; font-weight: bold; color: #034078; }
-    .card-title-dark { font-size: 1.2rem; font-weight: bold; color: #151515; }
-    .btn:active { transform: scale(0.80); box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24); }
+    html {
+      font-family:Arial;
+      display:inline-block;
+      text-align:center
+    }
+
+    table {
+      width:90%;
+      table-layout:fixed
+    }
+
+    table.font1 {
+      font-size:clamp(.9rem,0.9vw,1.2rem)
+    }
+
+    table.style2 {
+      width:100%;
+      table-layout:fixed
+    }
+
+    td {
+      text-align:left
+    }
+
+    th {
+      text-align:center
+    }
+
+    p {
+      font-size:1.2rem
+    }
+
+    body {
+      margin:0
+    }
+
+    .title1 {
+      font-size:1.2rem;
+      font-weight:700;
+      color:#034078
+    }
+
+    .alnright {
+      text-align:right
+    }
+
+    .topnav {
+      overflow:hidden;
+      background-color:#263c5e;
+      color:#fff;
+      font-size:1.5rem;
+      margin:0;
+      padding:0
+    }
+
+    .content {
+      padding:10px
+    }
+
+    .card {
+      background-color:#fff;
+      padding:5px;
+      box-shadow:2px 2px 12px 1px rgba(140,140,140,.5)
+    }
+
+    .card-grid {
+      max-width:700px;
+      margin:0 auto;
+      display:grid;
+      grid-gap:2rem;
+      grid-template-columns:repeat(auto-fit,minmax(20em,1fr))
+    }
+
+    .reading {
+      font-size:2rem
+    }
+
+    .headline {
+      font-size:2rem;
+      font-weight:700
+    }
+
+    .card.info {
+      color:#034078
+    }
+
+    .card.info-dark {
+      color:#151515
+    }
+
+    .card-title {
+      font-size:1.2rem;
+      font-weight:700;
+      color:#034078
+    }
+
+    .card-title-dark {
+      font-size:1.2rem;
+      font-weight:700;
+      color:#151515
+    }
+
+    .btn:active {
+      transform:scale(0.80);
+      box-shadow:3px 2px 22px 1px rgba(0,0,0,0.24)
+    }
+
     .btn {
-            text-decoration: none;
-            border: none;
-            width: 90px;
-            padding: 10px 10px;
-            margin: 15px 5px 15px 5px;
-            text-align: center;
-            font-size: 16px;
-            background-color:#034078;
-            color: #fff;
-            border-radius: 5px;
-            box-shadow: 7px 6px 28px 1px rgba(0, 0, 0, 0.24);
-            cursor: pointer;
-            outline: none;
-            transition: 0.2s all;
-          }
-    
+      text-decoration:none;
+      border:none;
+      width:90px;
+      padding:10px;
+      margin:15px 5px;
+      text-align:center;
+      font-size:16px;
+      background-color:#034078;
+      color:#fff;
+      border-radius:5px;
+      box-shadow:7px 6px 28px 1px rgba(0,0,0,0.24);
+      cursor:pointer;
+      outline:none;
+      transition:.2s all
+    }
+
     .flexBox1 {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      text-align: center;
+      display:flex;
+      flex-direction:row;
+      justify-content:space-between;
+      align-items:center;
+      text-align:center
     }
 
     .flexBox2 {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-around;
-      align-items: center;
-      text-align: center;
+      display:flex;
+      flex-direction:row;
+      justify-content:space-around;
+      align-items:center;
+      text-align:center
     }
 
     input:invalid {
-        background-color: rgb(255, 179, 190);
+      background-color:#ffb3be
     }
 
-    input[type=text], select {
-        padding: 5px 5px;
-        margin: 8px 0;
-        display: inline-block;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box;
+    input[type=text],select {
+      padding:5px;
+      margin:8px 0;
+      display:inline-block;
+      border:1px solid #ccc;
+      border-radius:4px;
+      box-sizing:border-box
     }
 
-    input[type=number], select {
-        padding: 5px 5px;
-        margin: 8px 0;
-        display: inline-block;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box;
+    input[type=number],select {
+      padding:5px;
+      margin:8px 0;
+      display:inline-block;
+      border:1px solid #ccc;
+      border-radius:4px;
+      box-sizing:border-box
     }
 
-    input[type=time], select {
-        padding: 5px 5px;
-        margin: 8px 0;
-        display: inline-block;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }     
-     
+    input[type=time],select {
+      padding:5px;
+      margin:8px 0;
+      display:inline-block;
+      border:1px solid #ccc;
+      border-radius:4px;
+      box-sizing:border-box
+    }
+
     hr {
-        border: 0;
-        height: 1px;
-        background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+      border:0;
+      height:1px;
+      background-image:linear-gradient(to right,rgba(0,0,0,0),rgba(0,0,0,0.75),rgba(0,0,0,0))
     }
-   
+
     summary {
-        position: relative;
-        padding: 12px;
-        display: flex;
-        color: #102752;
-        transform: scaleX(-1);
+      position:relative;
+      padding:12px;
+      display:flex;
+      color:#102752;
+      transform:scaleX(-1)
     }
 
     summary b {
-        display: inline-block;
-        position: absolute;
-        right: 6px;
-        transform: scaleX(-1);
+      display:inline-block;
+      position:absolute;
+      right:6px;
+      transform:scaleX(-1)
     }
 
     details>summary {
-        list-style: none;
+      list-style:none
     }
 
     summary::-webkit-details-marker {
-        display: none;
+      display:none
     }
 
     summary::after {
-        content: '+';
-        color: #999999;    
+      content:'+';
+      color:#999
     }
-    
+
     details[open] summary:after {
-		  content: "-";
-      color: #999999;  
+      content:"-";
+      color:#999
     }
 
-    .detailsFlexBox{
-      display: flex;
-      flex-direction: row;
+    .detailsFlexBox {
+      display:flex;
+      flex-direction:row;
       justify-content:flex-start;
-      align-items: center;
-      gap: 10px;
-      margin-left: 10px;
-      margin-top: 5px;
-      margin-bottom: 5px;
+      align-items:center;
+      gap:10px;
+      margin-left:10px;
+      margin-top:5px;
+      margin-bottom:5px
     }
 
-    .flexContainer{
-      display: flex;
-      flex-direction: row;
+    .flexContainer {
+      display:flex;
+      flex-direction:row;
       justify-content:flex-start;
-      align-items: center;
-      margin-left: 10px;
-      margin-top: 5px;
+      align-items:center;
+      margin-left:10px;
+      margin-top:5px
     }
 
-    .flexColLeft{
-      flex-basis: 65%;
-      text-align: start;
-      padding-left: 5px;
-    }
-  
-    .flexColRight{
-      flex-basis: 35%;
-      text-align: end;
-      padding-right: 25px;
+    .flexColLeft {
+      flex-basis:65%;
+      text-align:start;
+      padding-left:5px
     }
 
-    .fontBold{
-      font-weight: bold;
-      text-align: left;
-      margin-left: 10px;
+    .flexColRight {
+      flex-basis:35%;
+      text-align:end;
+      padding-right:25px
     }
 
-    .fontNormal{
-      font-weight: normal;
-      text-align: left;
-      margin-left: 10px;
+    .fontBold {
+      font-weight:700;
+      text-align:left;
+      margin-left:10px
     }
 
-    .cellStyle1{
-      width: 140px;
-      text-align: left;
+    .fontNormal {
+      font-weight:400;
+      text-align:left;
+      margin-left:10px
     }
 
-    .cellStyle2{
-      width: 80px;
-      text-align: left;
+    .cellStyle1 {
+      width:140px;
+      text-align:left
     }
 
-   
+    .cellStyle2 {
+      width:80px;
+      text-align:left
+    }
+
     .version {
-      top: -40%;
-      right: -165px;
-      font-size: 40%;
-      margin-top: -25px;
-      margin-bottom: 10px;
-      position: relative;
+      top:-40%;
+      right:-165px;
+      font-size:40%;
+      margin-top:-25px;
+      margin-bottom:10px;
+      position:relative
     }
 
-  </style>
+</style>
 
 </head>
 <body onload="uhrzeit()">
 
   <div class="topnav">
     <h3>SoyoSource-PowerController</h3>
-    <div class="version">v 1.240509</div>
+    <div class="version">v 1.240521</div>
   </div>
 
   <div class="content">
@@ -337,7 +423,7 @@ const char index_html[] PROGMEM = R"rawliteral(
           <hr>
           <div class="flexContainer">
             <div class="flexColLeft">Max Output [W]:</div>
-            <div class="flexColRight"><input type="number" min="0" max="2000" id="MAXWATTINPUT"/></div>
+            <div class="flexColRight"><input type="number" min="0" max="5000" id="MAXWATTINPUT"/></div>
           </div>
           <div class="flexContainer">
             <div class="flexColLeft">Nullpunkt-Offset [W]:</div>
@@ -622,6 +708,11 @@ const char index_html[] PROGMEM = R"rawliteral(
     var meteripaddr = document.getElementById("METERIP").value;
     var meterinterval = document.getElementById("METERINTERVAL").value;
     var maxwatt = document.getElementById("MAXWATTINPUT").value;
+    if (maxwatt < 0){
+      maxwatt = 0
+    } else if( maxwatt > 5000) {
+      maxwatt = 5000
+    }
     var nullinterval = document.getElementById("NULLINTERVAL").value;
     var nulloffset = document.getElementById("NULLOFFSET").value;
 
